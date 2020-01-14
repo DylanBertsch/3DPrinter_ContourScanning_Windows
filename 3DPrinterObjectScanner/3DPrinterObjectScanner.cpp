@@ -23,17 +23,16 @@ void scanArea(int xpos, int ypos, int xLength, int yLength, float stepSize)
 		for (float y = ypos; y <= ypos + yLength; y = y + stepSize)
 		{			
 			printer.goToPosition(x, y,5);//Go to point in mesh grid.
-			printer.writeGcode((char*)"G2001\n");//Get TOF Value
-			Sleep(1);
-			char* data = printer.blockingRead((char*)"TOF:");			
+			char* data = printer.readGcodeResponse((char*)"G2001\n",(char*)"TOF:",500);
+			string TOF_SUBSTRING = string(data);
 			std::regex r("[+-]?([0-9]*[.])?[0-9]+");//Get a float value from the printer
-			smatch m;
-			string str = string(data);
-			regex_search(str, m, r);
+			smatch m;			
+			regex_search(TOF_SUBSTRING, m, r);
 			float Z = stof(m.str(0));
 			outputDataX.push_back(x);
 			outputDataY.push_back(y);
-			if (Z < 50)//Objected Detected
+			cout << Z << endl;
+			if (Z < 51)//Objected Detected
 			{
 				outputDataZ.push_back(1);
 				cout << 1 << endl;
@@ -66,6 +65,6 @@ void writeCSV()
 
 int main()
 {
-	scanArea(125, 150, 60, 60, 0.5);
+	scanArea(125, 150, 35, 40, 0.5);
 	writeCSV();
 }

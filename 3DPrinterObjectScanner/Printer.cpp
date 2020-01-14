@@ -14,10 +14,9 @@ Printer::Printer(LPCWSTR printerPort)
 			SP->ReadData(inputBuffer, INPUT_BUFFER_SIZE);
 			Sleep(500);
 		}
-		memset(inputBuffer,0,INPUT_BUFFER_SIZE);
-		writeGcode((char*)"G28\n");
+		memset(inputBuffer,0,INPUT_BUFFER_SIZE);		
 		printf("Homing Printer...\n");
-		blockingRead((char*)"endstops hit:");
+		readGcodeResponse((char*)"G28\n", (char*)"endstops hit:",0);		
 		printf("Homing Success.\n");
 	}	
 }
@@ -45,31 +44,42 @@ char* Printer::read(int timeout)
 		}
 		readCount++;
 	}
-	return -1;//Read timed out
+	return (char*)-1;//Read timed out
 }
 
-char* Printer::blockingRead(char* expectedResponse)//Waits for a specific substring from the printer.
-{	
+char* Printer::readGcodeResponse(char* gcodeString, char* returnSubtring, int timeout)//if timeout is 0; gcode is only sent once.
+{
 	int readCount = 0;
+	//Load the output buffer with the gcodeString
+	memset(outputBuffer, 0, OUTPUT_BUFFER_SIZE);
+	strcpy_s(outputBuffer, OUTPUT_BUFFER_SIZE, gcodeString);
+	SP->WriteData(outputBuffer, strlen(outputBuffer));//Write the gcode data
+
 	while (true)
-	{
-		//Clear buffer and read
-		memset(outputBuffer, 0, OUTPUT_BUFFER_SIZE);
+	{	
+		memset(inputBuffer, 0, INPUT_BUFFER_SIZE);
 		SP->ReadData(inputBuffer, INPUT_BUFFER_SIZE);
-		string input = string(inputBuffer);
-		int substringPosition = input.find(expectedResponse);//Attempt to find the substring.
-		if (substringPosition >= 0)
+		if (strlen(inputBuffer) > 0)
 		{
-			return inputBuffer;//Desired response recieved, stop blocking. 
+			string responseData = string(inputBuffer);
+			//Try to find the substring
+			int substringIndex = responseData.find(returnSubtring);
+			if (substringIndex >= 0)//found the substring
+			{
+				return &inputBuffer[substringIndex];
+			}
 		}
-		if (readCount > 50)
+		if(readCount > timeout && timeout > 0)//Send it again and keep trying....
 		{
-			SP->WriteData(outputBuffer, strlen(outputBuffer));
+			readCount = 0;
+			memset(outputBuffer, 0, OUTPUT_BUFFER_SIZE);
+			strcpy_s(outputBuffer, OUTPUT_BUFFER_SIZE, gcodeString);
+			SP->WriteData(outputBuffer, strlen(outputBuffer));//Write the gcode data
+
 		}
 		readCount++;
 		Sleep(1);
 	}
-	return inputBuffer;
 }
 
 void Printer::goToPosition(float x, float y, float z)
@@ -82,10 +92,9 @@ void Printer::goToPosition(float x, float y, float z)
 			memset(output, 0, 50);
 			//Format the position gcode
 			sprintf_s(output, "G0 X%f Y%f Z%f\n", x, y, z);
-			writeGcode(output);
-			blockingRead((char*)"ok");//Block until the printer has responded to the request.
-			writeGcode((char*)"M114\n");//Verify the print head is in the desired position.
-			string response = string(blockingRead((char*)"X:"));
+			readGcodeResponse(output, (char*)"ok",500);
+			char* data = readGcodeResponse((char*)"M114\n", (char*)"X:",500);
+			string response = string(data);
 			std::regex r("[+-]?([0-9]*[.])?[0-9]+");
 			smatch m;
 			float X;
