@@ -19,5 +19,6 @@ public:
 	Printer(LPCWSTR printerPort);
 	bool writeGcode(char* gcodeString);
 	char* blockingRead(char* expectedResponse);
+	char* read(int timeout);//Specify a number to timeout at.
 	void goToPosition(float x, float y, float z);
 };
