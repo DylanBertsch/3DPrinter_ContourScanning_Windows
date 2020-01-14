@@ -16,7 +16,7 @@ Printer::Printer(LPCWSTR printerPort)
 		}
 		writeGcode((char*)"G28\n");
 		printf("Homing Printer...\n");
-		getResponse((char*)"endstops hit:");
+		blockingRead((char*)"endstops hit:");
 		printf("Homing Success.\n");
 	}	
 }
@@ -25,37 +25,20 @@ bool Printer::writeGcode(char* gcodeString)
 {
 	//Clear outputBuffer
 	memset(outputBuffer, 0, OUTPUT_BUFFER_SIZE);
-	//Copy and send
-	strcpy_s(outputBuffer, OUTPUT_BUFFER_SIZE,gcodeString);
-	SP->WriteData(outputBuffer, strlen(outputBuffer));
-	//Wait(block) until the printer sends something back in order to keep synchronization
-	memset(inputBuffer, 0, INPUT_BUFFER_SIZE);
-	/*
-	int readCount = 0;
-	while (strlen(inputBuffer) == 0)
-	{
-		SP->ReadData(inputBuffer, INPUT_BUFFER_SIZE);
-		Sleep(1);
-		readCount++;
-		if (readCount > 10)//Timeout 
-		{
-			return false; 
-		}
-	}
-	*/
-	return true; 
+	//Copy gcodeString into buffer and send.
+	strcpy_s(outputBuffer, OUTPUT_BUFFER_SIZE,gcodeString);	
+	return SP->WriteData(outputBuffer, strlen(outputBuffer));
 }
 
-char* Printer::getResponse(char* expectedResponse)//if not NULL waits(blocks) until response is recieved
-{
-	string input;
+char* Printer::blockingRead(char* expectedResponse)//Waits for a specific substring
+{	
 	int readCount = 0;
 	while (true)
 	{
 		//Clear buffer and read
 		memset(outputBuffer, 0, OUTPUT_BUFFER_SIZE);
 		SP->ReadData(inputBuffer, INPUT_BUFFER_SIZE);
-		input = string(inputBuffer);
+		string input = string(inputBuffer);
 		int substringPosition = input.find(expectedResponse);
 		if (substringPosition >= 0)//Desired Response recieved
 		{
@@ -82,9 +65,9 @@ void Printer::goToPosition(float x, float y, float z)
 			//Format the gcode
 			sprintf_s(output, "G0 X%f Y%f Z%f\n", x, y, z);
 			writeGcode(output);//Go to position
-			getResponse((char*)"ok");//Block until the printer has responded to the request.
+			blockingRead((char*)"ok");//Block until the printer has responded to the request.
 			writeGcode((char*)"M114\n");//Verify the print head is in the desired position.
-			string response = string(getResponse((char*)"X:"));
+			string response = string(blockingRead((char*)"X:"));
 			std::regex r("[+-]?([0-9]*[.])?[0-9]+");
 			smatch m;
 			float X;

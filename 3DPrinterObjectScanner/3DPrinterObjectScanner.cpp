@@ -25,7 +25,7 @@ void scanArea(int xpos, int ypos, int xLength, int yLength, float stepSize)
 			printer.goToPosition(x, y,5);//Go to point in mesh grid.
 			printer.writeGcode((char*)"G2001\n");//Get TOF Value
 			Sleep(1);
-			char* data = printer.getResponse((char*)"TOF:");			
+			char* data = printer.blockingRead((char*)"TOF:");			
 			std::regex r("[+-]?([0-9]*[.])?[0-9]+");//Get a float value from the printer
 			smatch m;
 			string str = string(data);

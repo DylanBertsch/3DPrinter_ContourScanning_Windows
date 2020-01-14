@@ -18,6 +18,6 @@ private:
 public:
 	Printer(LPCWSTR printerPort);
 	bool writeGcode(char* gcodeString);
-	char* getResponse(char* expectedResponse);
+	char* blockingRead(char* expectedResponse);
 	void goToPosition(float x, float y, float z);
 };
