@@ -30,6 +30,22 @@ bool Printer::writeGcode(char* gcodeString)
 	return SP->WriteData(outputBuffer, strlen(outputBuffer));
 }
 
+char* Printer::read(int timeout)
+{
+	int readCount = 0; 
+	while(readCount < timeout)
+	{
+		//Clear the input buffer.
+		memset(inputBuffer,0,INPUT_BUFFER_SIZE);
+		SP->ReadData(inputBuffer,INPUT_BUFFER_SIZE);
+		if(strlen(inputBuffer) > 0)//Data recieved; we are done.
+		{
+			return inputBuffer;
+		}
+		readCount++;
+	}
+}
+
 char* Printer::blockingRead(char* expectedResponse)//Waits for a specific substring
 {	
 	int readCount = 0;
