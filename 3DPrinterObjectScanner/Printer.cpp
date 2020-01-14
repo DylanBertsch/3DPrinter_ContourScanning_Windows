@@ -44,6 +44,7 @@ char* Printer::read(int timeout)
 		}
 		readCount++;
 	}
+	return -1;//Read timed out
 }
 
 char* Printer::blockingRead(char* expectedResponse)//Waits for a specific substring
